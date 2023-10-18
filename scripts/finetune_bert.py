@@ -1,16 +1,26 @@
-import torch
-from transformers import AutoModel, AutoTokenizer, AdamW, get_linear_schedule_with_warmup
+"""
+Author : Harshvardhan Raju G
+Deevia Software
+Date : 17/10/23
+"""
+
+
 import os
-import PyPDF2
 import torch
-from transformers import AutoTokenizer
+import PyPDF2
+from transformers import AutoModel, AutoTokenizer, AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import Dataset, DataLoader
 
 # Define the model and tokenizer
-model_name = "bert-base-uncased"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModel.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+model = AutoModel.from_pretrained("bert-base-uncased")
 
+tokenizer_roberta = AutoTokenizer.from_pretrained("roberta-base")
+model_roberta = AutoModel.from_pretrained("roberta-base")
+
+
+model = model_roberta
+tokenizer = tokenizer_roberta
 # Define your fine-tuning dataset and data loaders
 # You'll need to implement a DataLoader for your dataset
 
@@ -132,7 +142,7 @@ class PDFDataset_new(Dataset):
         for jd_name, class_id in self.jd_to_class_mapping.items():
             # Find all resume files for the current JD
             resume_files = [f for f in os.listdir(self.resume_dir) if f.startswith(f"{jd_name}_resume_")]
-            jd_file = os.path.join(self.jd_dir, f"{jd_name}_jd.pdf")
+            jd_file = os.path.join(self.jd_dir, f"{jd_name}.pdf")
 
             for resume_file in resume_files:
                 # Construct the full file paths
@@ -160,9 +170,9 @@ class PDFDataset_new(Dataset):
     def extract_text_from_pdf(self, file_path):
         text = ""
         with open(file_path, "rb") as pdf_file:
-            pdf_reader = PyPDF2.PdfFileReader(pdf_file)
-            for page_num in range(pdf_reader.numPages):
-                text += pdf_reader.getPage(page_num).extractText()
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            for page_num in range(len(pdf_reader.pages)):
+                text += pdf_reader.pages[page_num].extract_text()
         return text
 
 
@@ -183,7 +193,8 @@ dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 train_dataloader  = dataloader
 
 # Define the optimizer and learning rate scheduler
-optimizer = AdamW(model.parameters(), lr=2e-5)  # You can adjust the learning rate
+# optimizer = AdamW(model.parameters(), lr=2e-5)  # You can adjust the learning rate
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=len(train_dataloader) * num_epochs)
 
 # Define the loss function
